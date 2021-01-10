@@ -11,6 +11,45 @@ var (
 // isFull       = false
 )
 
+func MakeSureUser(client *tdlib.Client, each func(contact tdlib.Contact), phone ...string) (existsphone []tdlib.Contact) {
+
+	testContacts := []tdlib.Contact{}
+
+	for _, ph := range phone {
+		testcontact := *tdlib.NewContact(ph, "", "", "", 0)
+		testContacts = append(testContacts, testcontact)
+	}
+	imted, err := client.ImportContacts(testContacts)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	for _, uid := range imted.UserIDs {
+		// for _, uid := range users.UserIDs {
+		user, cerr := client.GetUser(uid)
+		if cerr != nil {
+			logrus.Error(cerr)
+			if uid != 0 && uid != -1 {
+				contact := *tdlib.NewContact("", "", "", "", uid)
+				// contact.Extra = user.Username
+				each(contact)
+				existsphone = append(existsphone, contact)
+
+			}
+			break
+		} else {
+
+			contact := *tdlib.NewContact(user.PhoneNumber, user.FirstName, user.LastName, "", uid)
+			contact.Extra = user.Username
+			each(contact)
+			existsphone = append(existsphone, contact)
+		}
+		// }
+	}
+	return
+
+}
+
 func GetUsers(client *tdlib.Client, chatid int64, limit int32) (chats []tdlib.ChatMember, err error) {
 	// if !isFull && int(limit) > len(allMembers) {
 
@@ -19,7 +58,7 @@ func GetUsers(client *tdlib.Client, chatid int64, limit int32) (chats []tdlib.Ch
 	var chatsMems *tdlib.ChatMembers
 	// suoergroupid := client.SearchChatMembers
 	groupid := GetGroupId(chatid)
-	// logrus.Info("g:", groupid)
+	logrus.Info("group id: ", groupid, "| chat id:", chatid)
 	//
 	chat, cerr := client.GetChat(chatid)
 	if cerr != nil {
@@ -32,7 +71,7 @@ func GetUsers(client *tdlib.Client, chatid int64, limit int32) (chats []tdlib.Ch
 			chatsMems, err = client.GetSupergroupMembers(int32(groupid), nil, offset, limit)
 		case tdlib.ChatTypeBasicGroupType:
 			// chatsMems, err = client.GetSupergroupMembers(int32(groupid), nil, offset, limit)
-			if bgFullInfo, gerr := client.GetBasicGroupFullInfo(groupid); gerr != nil {
+			if bgFullInfo, gerr := client.GetBasicGroupFullInfo(int32(groupid)); gerr != nil {
 				logrus.Error("Get Basic group err:", gerr)
 				return nil, gerr
 			} else {
@@ -61,10 +100,16 @@ func GetUsers(client *tdlib.Client, chatid int64, limit int32) (chats []tdlib.Ch
 	// chatsMems, err = client.SearchChatMembers(chatid, "", limit, nil)
 	// client.GetBasicGroupFullInfo()
 	// chats = chatsMems.Members
-	// return
+	// return349157802
+	//1349157802
+	//1068773197
 }
 
 //GetGrouId : get groupid from chatid(int64) -> groupid(int32)
 func GetGroupId(chatid int64) int32 {
-	return int32(0 - 1000000000000 - chatid)
+	if chatid < -1000000000000 {
+		return int32(0 - 1000000000000 - chatid)
+	} else {
+		return int32(0 - chatid)
+	}
 }

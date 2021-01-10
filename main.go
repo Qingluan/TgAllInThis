@@ -3,9 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/Arman92/go-tdlib"
 	"github.com/Qingluan/TgAllInThis/tools"
@@ -65,7 +67,7 @@ func readConfig(path string) *configparser.Configuration {
 
 func RunAction(client *tdlib.Client, config *configparser.Configuration) {
 	if action == "" {
-		action = tools.Tui.Select("How to Do?", "getChats", "getContacts", "exit")
+		action = tools.Tui.Select("How to Do?", "getChats", "getContacts", "queryPhone", "exit")
 	}
 	switch action {
 	case "getChats":
@@ -75,6 +77,26 @@ func RunAction(client *tdlib.Client, config *configparser.Configuration) {
 		for _, chat := range chats {
 			ctp := actions.GetChatType(chat)
 			tools.Log("All-Chat", "GroupTitle:%s | chat id: %d | groupType: %s", chat.Title, chat.ID, ctp)
+		}
+	case "queryPhone":
+		frc := tools.Tui.Select("from ?", "file", "stdin")
+		if frc == "file" {
+			filePath := tools.Tui.Input("file path ,every line is a phone num  >>", tools.Datas{})
+			data, err := ioutil.ReadFile(filePath)
+			if err != nil {
+				logrus.Error(err)
+				return
+			}
+			lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+			actions.MakeSureUser(client, func(c tdlib.Contact) {
+				tools.Log("Exists Phone User", "tel:%s | name : %s |username: %s ", c.PhoneNumber, c.FirstName+c.LastName, c.Extra)
+			}, lines...)
+
+		} else {
+			ph := tools.Tui.Input("type a phone must add code like +63xxxx philips >", tools.Datas{})
+			actions.MakeSureUser(client, func(c tdlib.Contact) {
+				tools.Log("Exists Phone User", "tel:%s | name : %s |username: %s ", c.PhoneNumber, c.FirstName+c.LastName, c.Extra)
+			}, ph)
 		}
 
 	case "getContacts":
